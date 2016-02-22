@@ -1,0 +1,38 @@
+{
+  "name": "node-folder-diff",
+  "version": "1.0.0",
+  "description": "make diff between two folder, gen patch file what describe the difference of folders ",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --harmony -t 5000"
+  },
+  "homepage": "https://github.com/alexayan/folder-diff",
+  "author": {
+    "name": "alexayan",
+    "email": "773655223@qq.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/alexayan/folder-diff.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alexayan/folder-diff/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/alexayan/folder-diff/blob/master/LICENSE-MIT"
+    }
+  ],
+  "dependencies": {
+    "crypto": "0.0.3",
+    "q": "^1.4.1"
+  },
+  "devDependencies": {
+    "mocha": "^2.4.5",
+    "chai": "^3.5.0"
+  },
+  "keywords": [
+    "diff", "folder", "node"
+  ]
+}
