@@ -2,6 +2,8 @@
 
 make diff between two folder, gen patch file what describe the difference of folders
 
+support Asynchronous
+
 ## install 
 
 ```shell

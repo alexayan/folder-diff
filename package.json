@@ -1,6 +1,6 @@
 {
   "name": "node-folder-diff",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "make diff between two folder, gen patch file what describe the difference of folders ",
   "main": "index.js",
   "scripts": {
@@ -26,13 +26,16 @@
   ],
   "dependencies": {
     "crypto": "0.0.3",
-    "q": "^1.4.1"
+    "q": "^1.4.1",
+    "walk": "^2.3.9"
   },
   "devDependencies": {
     "mocha": "^2.4.5",
     "chai": "^3.5.0"
   },
   "keywords": [
-    "diff", "folder", "node"
+    "diff",
+    "folder",
+    "node"
   ]
 }

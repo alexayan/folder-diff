@@ -2,6 +2,7 @@ var crypto = require('crypto');
 var fs = require('fs');
 var Q = require('q');
 var path = require('path');
+var walk = require('walk');
 
 /**
  * get hash of file
@@ -60,12 +61,18 @@ function compare_two_file(fileA, fileB){
 function gen_folder_hash_map(folder){
 	var map = {};
 	return Q.Promise(function(resolve, reject, notify){
-		fs.readdir(folder, function(err, files){
-			if(err){
-				reject(err);
-			}else{
-				resolve(files);
-			}
+		var walker  = walk.walk(folder, { followLinks: false }),
+			files = [];
+		walker.on('file', function(root, stat, next){
+			files.push(root + '/' + stat.name);
+			next();
+		});
+		walker.on('end', function(){
+			resolve(files);
+		});
+		walker.on("errors", function(root, nodeStatsArray, next){
+			reject(nodeStatsArray);
+			next();
 		});
 	}).then(function(files){
 		var tasks = [];
