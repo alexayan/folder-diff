@@ -89,6 +89,12 @@ function gen_folder_hash_map(folder){
 	});
 }
 
+function path_transform(old_path, old_path_dir, new_path_dir){
+	var relative_path = path.relative(old_path_dir, old_path);
+	return path.resolve(new_path_dir, relative_path);
+}
+
+
 /**
  * generate the change log betwenn two folder
  * @param  {String} folder_old old folder path
@@ -103,14 +109,17 @@ function folder_diff(folder_old, folder_new){
 			old_map[prop].type = 'delete';
 		}
 		for(var prop in new_map){
-			if(old_map[prop]){
-				if(old_map[prop].hash===new_map[prop].hash){
-					delete old_map[prop];
+			var old_prop = path_transform(prop, folder_new, folder_old);
+			if(old_map[old_prop]){
+				if(old_map[old_prop].hash==new_map[prop].hash){
+					delete old_map[old_prop];
 				}else{
-					old_map[prop].hash = new_map[prop].hash;
+					delete old_map[old_prop];
+					old_map[prop] = new_map[prop];
 					old_map[prop].type = 'modify';
 				}
 			}else{
+				delete old_map[old_prop];
 				old_map[prop] = new_map[prop];
 				old_map[prop].type = 'add';
 			}
