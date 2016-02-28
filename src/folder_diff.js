@@ -3,13 +3,15 @@ var fs = require('fs');
 var Q = require('q');
 var path = require('path');
 var walk = require('walk');
+var AdmZip = require('adm-zip');
+var archiver = require('archiver');
 
 /**
  * get hash of file
  * @param  {String} fileName file path
  * @return {Object}           hash {'hash':'', file:''}  
  */
-function file_hash(fileName){
+function file_hash(fileName, folder){
 	return Q.Promise(function(resolve, reject, notify){
 		fs.exists(fileName, function (exists) {
 			if(exists){
@@ -31,7 +33,8 @@ function file_hash(fileName){
 		            res = hash.digest('hex');
 		            resolve({
 		            	hash : res,
-		            	file : fileName
+		            	file : fileName,
+		            	folder : folder
 		            });
 		        });
 			}catch(e){
@@ -78,7 +81,7 @@ function gen_folder_hash_map(folder){
 		var tasks = [];
 		files.forEach(function(name){
 			name = path.resolve(folder, name);
-			tasks.push(file_hash(name));
+			tasks.push(file_hash(name, folder));
 	    });
 	    return Q.all(tasks);
 	}).then(function(res){
@@ -128,9 +131,62 @@ function folder_diff(folder_old, folder_new){
 	});
 }
 
+function zip_diff(r_old, r_new){
+	var temp_dir_old = '/tmp/old_diff_dir',
+		temp_dir_new = '/tmp/new_diff_dir',
+		zip_old = new AdmZip(r_old),
+		zip_new = new AdmZip(r_new);
+	deleteFolderRecursive(temp_dir_old);
+	deleteFolderRecursive(temp_dir_new);
+	zip_old.extractAllTo(temp_dir_old, true);
+	zip_new.extractAllTo(temp_dir_new, true);
+	return diff(temp_dir_old, temp_dir_new);
+}
+
+/**
+ * diff folders or zip files , return zip buffer
+ * @param  {String} r_old old path
+ * @param  {String} r_new new path
+ * @return {Buffer}       patch buffer
+ */
+function diff(r_old, r_new){
+	if(path.extname(r_old)==='.zip' && path.extname(r_new)==='.zip'){
+		return zip_diff(r_old, r_new);
+	}else{
+		return folder_diff(r_old, r_new).then(function(map){
+			var archive = archiver('zip');			
+			for(var prop in map){
+				if(map[prop].type!=='delete'){
+					archive.append(fs.createReadStream(prop), { name: prop.replace(r_new, '')});
+				}
+			}
+			archive.append(new Buffer(JSON.stringify(map), 'utf-8'), { name: 'config.json'});
+			archive.finalize();
+			return archive;
+		});
+	}
+}
+
+function deleteFolderRecursive(path) {
+    var files = [];
+    if( fs.existsSync(path) ) {
+        files = fs.readdirSync(path);
+        files.forEach(function(file,index){
+            var curPath = path + "/" + file;
+            if(fs.statSync(curPath).isDirectory()) {
+                deleteFolderRecursive(curPath);
+            } else { 
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+};
+
 module.exports = {
   file_hash: file_hash,
   compare_two_file : compare_two_file,
   gen_folder_hash_map : gen_folder_hash_map,
-  folder_diff : folder_diff
+  folder_diff : folder_diff,
+  diff : diff
 };
