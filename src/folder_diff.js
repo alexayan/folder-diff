@@ -155,12 +155,15 @@ function diff(r_old, r_new){
 	}else{
 		return folder_diff(r_old, r_new).then(function(map){
 			var archive = archiver('zip');			
+			var arr = [];
 			for(var prop in map){
 				if(map[prop].type!=='delete'){
 					archive.append(fs.createReadStream(prop), { name: prop.replace(r_new, '')});
 				}
+				map[prop].file = path.relative(map[prop].folder, map[prop].file);
+				arr.push(map[prop]);
 			}
-			archive.append(new Buffer(JSON.stringify(map), 'utf-8'), { name: 'config.json'});
+			archive.append(new Buffer(JSON.stringify(arr), 'utf-8'), { name: 'config.json'});
 			archive.finalize();
 			return archive;
 		});
