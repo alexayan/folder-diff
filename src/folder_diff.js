@@ -5,6 +5,7 @@ var path = require('path');
 var walk = require('walk');
 var AdmZip = require('adm-zip');
 var archiver = require('archiver');
+var bsdiff = require('node-bsdiff');
 
 /**
  * get hash of file
@@ -97,6 +98,11 @@ function path_transform(old_path, old_path_dir, new_path_dir){
 	return path.resolve(new_path_dir, relative_path);
 }
 
+function path_transform_new_to_old(new_path, old_path_dir, new_path_dir){
+	var relative_path = path.relative(new_path_dir, new_path);
+	return path.resolve(old_path_dir, relative_path);
+}
+
 
 /**
  * generate the change log betwenn two folder
@@ -131,7 +137,7 @@ function folder_diff(folder_old, folder_new){
 	});
 }
 
-function zip_diff(r_old, r_new){
+function zip_diff(r_old, r_new, opt){
 	var temp_dir_old = '/tmp/old_diff_dir',
 		temp_dir_new = '/tmp/new_diff_dir',
 		zip_old = new AdmZip(r_old),
@@ -140,7 +146,7 @@ function zip_diff(r_old, r_new){
 	deleteFolderRecursive(temp_dir_new);
 	zip_old.extractAllTo(temp_dir_old, true);
 	zip_new.extractAllTo(temp_dir_new, true);
-	return diff(temp_dir_old, temp_dir_new);
+	return diff(temp_dir_old, temp_dir_new, opt);
 }
 
 /**
@@ -149,25 +155,59 @@ function zip_diff(r_old, r_new){
  * @param  {String} r_new new path
  * @return {Buffer}       patch buffer
  */
-function diff(r_old, r_new){
+function diff(r_old, r_new, opt){
+	opt = opt || {};
 	if(path.extname(r_old)==='.zip' && path.extname(r_new)==='.zip'){
-		return zip_diff(r_old, r_new);
+		return zip_diff(r_old, r_new, opt);
 	}else{
 		return folder_diff(r_old, r_new).then(function(map){
-			var archive = archiver('zip');			
-			var arr = [];
-			for(var prop in map){
-				if(map[prop].type!=='delete'){
-					archive.append(fs.createReadStream(prop), { name: prop.replace(r_new, '')});
-				}
-				map[prop].file = path.relative(map[prop].folder, map[prop].file);
-				arr.push(map[prop]);
+			if(opt.bsdiff){
+				return createBsdiffArchiver(r_old, r_new, map);
+			}else{
+				return createNomalArchiver(r_old, r_new, map);
 			}
-			archive.append(new Buffer(JSON.stringify(arr), 'utf-8'), { name: 'config.json'});
-			archive.finalize();
-			return archive;
 		});
 	}
+}
+
+function createBsdiffArchiver(r_old, r_new, map){
+	var archive = archiver('zip');			
+	var arr = [];
+	for(var prop in map){
+		if(map[prop].type==='add'){
+			archive.append(fs.createReadStream(prop), { name: prop.replace(r_new, '')});
+			map[prop].algorithm = 'normal';
+		}else if(map[prop].type==='modify'){
+			archive.append(bsdiff.diff(
+				fs.readFileSync(path_transform_new_to_old(prop, r_old, r_new)),
+				fs.readFileSync(prop)
+			), { name: prop.replace(r_new, '')});
+			map[prop].algorithm = 'bsdiff';
+		}else{
+			map[prop].algorithm = 'normal';
+		}
+		map[prop].file = path.relative(map[prop].folder, map[prop].file);
+		arr.push(map[prop]);
+	}
+	archive.append(new Buffer(JSON.stringify(arr), 'utf-8'), { name: 'config.json'});
+	archive.finalize();
+	return archive;
+}
+
+function createNomalArchiver(r_old, r_new, map){
+	var archive = archiver('zip');			
+	var arr = [];
+	for(var prop in map){
+		if(map[prop].type!=='delete'){
+			archive.append(fs.createReadStream(prop), { name: prop.replace(r_new, '')});
+		}
+		map[prop].file = path.relative(map[prop].folder, map[prop].file);
+		map[prop].algorithm = 'normal';
+		arr.push(map[prop]);
+	}
+	archive.append(new Buffer(JSON.stringify(arr), 'utf-8'), { name: 'config.json'});
+	archive.finalize();
+	return archive;
 }
 
 function deleteFolderRecursive(path) {

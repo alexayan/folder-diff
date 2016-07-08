@@ -1,6 +1,6 @@
 {
   "name": "node-folder-diff",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "description": "make diff between two folder, gen patch file what describe the difference of folders ",
   "main": "index.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "adm-zip": "^0.4.7",
     "archiver": "^0.21.0",
     "crypto": "0.0.3",
+    "node-bsdiff": "^0.1.4",
     "q": "^1.4.1",
     "walk": "^2.3.9"
   },
