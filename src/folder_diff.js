@@ -160,13 +160,19 @@ function diff(r_old, r_new, opt){
 	if(path.extname(r_old)==='.zip' && path.extname(r_new)==='.zip'){
 		return zip_diff(r_old, r_new, opt);
 	}else{
-		return folder_diff(r_old, r_new).then(function(map){
-			if(opt.bsdiff){
-				return createBsdiffArchiver(r_old, r_new, map);
-			}else{
-				return createNomalArchiver(r_old, r_new, map);
-			}
-		});
+		try{
+			return folder_diff(r_old, r_new).then(function(map){
+				if(opt.bsdiff){
+					return createBsdiffArchiver(r_old, r_new, map);
+				}else{
+					return createNomalArchiver(r_old, r_new, map);
+				}
+			});
+		}catch(e){
+			var deferred = Q.defer();
+			deferred.reject(e);
+			return deferred.promise;
+		}
 	}
 }
 
